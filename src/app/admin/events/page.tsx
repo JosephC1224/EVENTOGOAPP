@@ -1,6 +1,5 @@
 'use client';
 import Link from 'next/link';
-import { getEvents } from '@/lib/data';
 import { useSession } from '@/hooks/use-session';
 import { redirect } from 'next/navigation';
 import { format } from 'date-fns';
@@ -28,9 +27,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { deleteEvent, seedDatabase } from '@/lib/actions';
+import { deleteEvent, seedDatabase, getEventsAction } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Event } from '@/lib/types';
 
 
@@ -60,6 +59,7 @@ function SeedDatabaseButton() {
 export default function AdminEventsPage() {
   const { user, loading } = useSession();
   const [events, setEvents] = useState<Event[]>([]);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!loading && user?.role !== 'Admin') {
@@ -68,15 +68,14 @@ export default function AdminEventsPage() {
   }, [user, loading]);
   
   useEffect(() => {
-    async function loadEvents() {
+    startTransition(async () => {
         try {
-            const fetchedEvents = await getEvents(true); // include past events
+            const fetchedEvents = await getEventsAction(true); // include past events
             setEvents(fetchedEvents);
         } catch(e) {
             // If db is not connected, it will throw. We can show an empty state.
         }
-    }
-    loadEvents();
+    });
   }, [])
 
   if (loading || !user) {
@@ -127,7 +126,13 @@ export default function AdminEventsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.length > 0 ? events.map((event) => (
+              {isPending ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        Loading events...
+                    </TableCell>
+                </TableRow>
+              ) : events.length > 0 ? events.map((event) => (
                 <TableRow key={event.id}>
                   <TableCell className="font-medium">{event.name}</TableCell>
                   <TableCell>

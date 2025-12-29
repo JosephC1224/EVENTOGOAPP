@@ -1,11 +1,11 @@
 'use client';
 
 import { useSession } from '@/hooks/use-session';
-import { getEventById } from '@/lib/data';
 import { notFound, redirect, useSearchParams } from 'next/navigation';
 import EventForm from '@/components/admin/event-form';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { Event } from '@/lib/types';
+import { getEventByIdAction } from '@/lib/actions';
 
 export default function EditEventPage() {
   const { user, loading: sessionLoading } = useSession();
@@ -13,7 +13,7 @@ export default function EditEventPage() {
   const id = searchParams.get('id');
 
   const [event, setEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(!!id);
+  const [loading, startTransition] = useTransition();
 
   useEffect(() => {
     if (!sessionLoading && user?.role !== 'Admin') {
@@ -23,14 +23,13 @@ export default function EditEventPage() {
 
   useEffect(() => {
     if (id) {
-      setLoading(true);
-      getEventById(id).then(eventData => {
+      startTransition(async () => {
+        const eventData = await getEventByIdAction(id);
         if (!eventData) {
           notFound();
         } else {
           setEvent(eventData);
         }
-        setLoading(false);
       });
     }
   }, [id]);

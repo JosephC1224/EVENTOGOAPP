@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useSession } from '@/hooks/use-session';
-import { getTicketsByUserId, getEventById } from '@/lib/data';
+import { getTicketsByUserIdAction, getEventByIdAction } from '@/lib/actions';
 import { useRouter } from 'next/navigation';
 import TicketCard from '@/components/ticket-card';
 import Link from 'next/link';
@@ -17,7 +17,7 @@ export default function MyTicketsPage() {
   const { user, loading: sessionLoading } = useSession();
   const router = useRouter();
   const [tickets, setTickets] = useState<EnrichedTicket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, startTransition] = useTransition();
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -27,22 +27,19 @@ export default function MyTicketsPage() {
       return;
     }
 
-    async function fetchTickets() {
-      setLoading(true);
-      const userTickets = await getTicketsByUserId(user!.id);
+    startTransition(async () => {
+      const userTickets = await getTicketsByUserIdAction(user!.id);
       
       const enrichedTickets = await Promise.all(
         userTickets.map(async (ticket) => {
-          const event = await getEventById(ticket.eventId);
+          const event = await getEventByIdAction(ticket.eventId);
           return { ...ticket, event };
         })
       );
 
       setTickets(enrichedTickets);
-      setLoading(false);
-    }
+    });
 
-    fetchTickets();
   }, [user, router, sessionLoading]);
 
 

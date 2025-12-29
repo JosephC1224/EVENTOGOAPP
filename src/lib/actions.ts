@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb } from './data';
+import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb, getEvents, getEventById, getTicketsByUserId } from './data';
 import { revalidatePath } from 'next/cache';
 import type { Event, User } from './types';
 import { createToken, decodeToken } from './jwt';
@@ -202,4 +202,17 @@ export async function seedDatabase() {
     } catch (e) {
         return { success: false, message: "Failed to seed database." };
     }
+}
+
+// Server actions to fetch data on the client
+export async function getEventsAction(includePast = false) {
+    return getEvents(includePast);
+}
+
+export async function getEventByIdAction(id: string) {
+    return getEventById(id);
+}
+
+export async function getTicketsByUserIdAction(userId: string) {
+    return getTicketsByUserId(userId);
 }

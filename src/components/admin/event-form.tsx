@@ -10,6 +10,8 @@ import { createEvent, updateEvent } from '@/lib/actions';
 import { Event } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { useToast } from '@/hooks/use-toast';
+import { useSession } from '@/hooks/use-session';
+
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -41,6 +43,7 @@ type EventFormValues = z.infer<typeof eventFormSchema>;
 export default function EventForm({ event }: { event: Event | null }) {
   const router = useRouter();
   const { toast } = useToast();
+  const { token } = useSession();
   const [isPending, setIsPending] = useState(false);
 
   const form = useForm<EventFormValues>({
@@ -87,8 +90,8 @@ export default function EventForm({ event }: { event: Event | null }) {
     formData.append('ticketTypes', JSON.stringify(ticketTypesWithIds));
 
     const result = event
-      ? await updateEvent(event.id, formData)
-      : await createEvent(formData);
+      ? await updateEvent(event.id, formData, token)
+      : await createEvent(formData, token);
 
     if (result && 'success' in result && !result.success) {
       toast({

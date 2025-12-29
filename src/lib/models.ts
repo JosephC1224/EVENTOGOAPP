@@ -26,7 +26,8 @@ const EventSchema = new Schema<Event>({
     },
     capacity: { type: Number, required: true },
     image: { type: String, required: true },
-    ticketTypes: [TicketTypeSchema]
+    ticketTypes: [TicketTypeSchema],
+    createdBy: { type: String, required: true },
 });
 
 const TicketSchema = new Schema<Ticket>({

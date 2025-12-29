@@ -34,13 +34,26 @@ import { Event } from '@/lib/types';
 
 
 function DeleteEventButton({ eventId }: { eventId: string }) {
-  const deleteEventWithId = deleteEvent.bind(null, eventId);
+  const { token } = useSession();
+  const deleteEventWithId = async () => {
+     try {
+      await deleteEvent(eventId, token);
+      toast({
+        title: 'Event Deleted',
+        description: 'The event has been successfully deleted.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: (error as Error).message || 'Failed to delete event.',
+      });
+    }
+  }
   return (
-    <form action={deleteEventWithId}>
-      <button type="submit" className="w-full text-left text-destructive">
-        Delete
-      </button>
-    </form>
+    <button onClick={deleteEventWithId} className="w-full text-left text-destructive">
+      Delete
+    </button>
   );
 }
 
@@ -57,7 +70,8 @@ function SeedDatabaseButton() {
 
 
 export default function AdminEventsPage() {
-  const { user, loading } = useSession();
+  const { user, token, loading } = useSession();
+  const { toast } = useToast();
   const [events, setEvents] = useState<Event[]>([]);
   const [isPending, startTransition] = useTransition();
 
@@ -68,15 +82,17 @@ export default function AdminEventsPage() {
   }, [user, loading]);
   
   useEffect(() => {
-    startTransition(async () => {
-        try {
-            const fetchedEvents = await getEventsAction(true); // include past events
-            setEvents(fetchedEvents);
-        } catch(e) {
-            // If db is not connected, it will throw. We can show an empty state.
-        }
-    });
-  }, [])
+    if (user?.role === 'Admin') {
+      startTransition(async () => {
+          try {
+              const fetchedEvents = await getEventsAction(true, user.id); // include past events, filtered by user
+              setEvents(fetchedEvents);
+          } catch(e) {
+              // If db is not connected, it will throw. We can show an empty state.
+          }
+      });
+    }
+  }, [user]);
 
   if (loading || !user) {
     return <div>Loading...</div>
@@ -91,7 +107,7 @@ export default function AdminEventsPage() {
             Event Management
           </h1>
           <p className="text-muted-foreground">
-            Create, edit, and manage all events.
+            Create, edit, and manage your events.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -107,9 +123,9 @@ export default function AdminEventsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Events</CardTitle>
+          <CardTitle>My Events</CardTitle>
           <CardDescription>
-            A list of all events in the system.
+            A list of all events you have created.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -170,7 +186,7 @@ export default function AdminEventsPage() {
               )) : (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                        No events found. You might need to connect to a database and seed it.
+                        You have not created any events yet.
                     </TableCell>
                 </TableRow>
               )}

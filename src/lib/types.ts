@@ -28,6 +28,7 @@ export type Event = {
   capacity: number;
   image: string; // Placeholder image ID
   ticketTypes: TicketType[];
+  createdBy: string; // User ID of the creator
 };
 
 export type Ticket = {

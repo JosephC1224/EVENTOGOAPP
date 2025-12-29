@@ -28,11 +28,15 @@ export default function EditEventPage() {
         if (!eventData) {
           notFound();
         } else {
+          // Security check: only allow editing if the user is the creator
+          if (user?.id !== eventData.createdBy) {
+            redirect('/admin/events');
+          }
           setEvent(eventData);
         }
       });
     }
-  }, [id]);
+  }, [id, user]);
 
   if (sessionLoading || loading) {
     return <div className="container mx-auto px-4 py-8">Loading event...</div>;

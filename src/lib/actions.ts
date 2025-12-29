@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb, getEvents, getEventById, getTicketsByUserId } from './data';
+import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb, getEvents, getEventById, getTicketsByUserId, updateUser as updateUserInDb, findUserById } from './data';
 import { revalidatePath } from 'next/cache';
 import type { Event, User } from './types';
 import { createToken, decodeToken } from './jwt';
@@ -129,7 +129,12 @@ const eventSchema = z.object({
     ticketTypes: z.string().min(1, 'At least one ticket type is required.')
 });
 
-export async function createEvent(formData: FormData) {
+export async function createEvent(formData: FormData, token: string | null) {
+    const user = decodeToken(token || '');
+    if (!user) {
+        return { success: false, message: 'Authentication required.' };
+    }
+
     const validated = eventSchema.safeParse(Object.fromEntries(formData.entries()));
 
     if (!validated.success) {
@@ -148,10 +153,10 @@ export async function createEvent(formData: FormData) {
                 lng: validated.data.locationLng,
             },
             ticketTypes: JSON.parse(ticketTypes),
+            createdBy: user.id,
         };
         await createEventInDb(newEvent);
         
-        // Revalidate paths BEFORE redirecting
         revalidatePath('/admin/events');
         revalidatePath('/');
         revalidatePath('/discover');
@@ -160,11 +165,21 @@ export async function createEvent(formData: FormData) {
         return { success: false, message: 'Failed to create event.' };
     }
     
-    // Redirect after all operations are complete
     redirect('/admin/events');
 }
 
-export async function updateEvent(id: string, formData: FormData) {
+export async function updateEvent(id: string, formData: FormData, token: string | null) {
+    const user = decodeToken(token || '');
+    if (!user) {
+        return { success: false, message: 'Authentication required.' };
+    }
+
+    const eventToUpdate = await getEventById(id);
+    if (eventToUpdate?.createdBy !== user.id) {
+        return { success: false, message: 'You are not authorized to update this event.' };
+    }
+
+
     const validated = eventSchema.safeParse(Object.fromEntries(formData.entries()));
 
     if (!validated.success) {
@@ -172,7 +187,7 @@ export async function updateEvent(id: string, formData: FormData) {
     }
     const { ticketTypes, ...eventData } = validated.data;
     try {
-         const updatedEvent: Omit<Event, 'id'> = {
+         const updatedEvent: Partial<Omit<Event, 'id'>> = {
             ...eventData,
             date: new Date(validated.data.date),
             location: {
@@ -184,7 +199,6 @@ export async function updateEvent(id: string, formData: FormData) {
         };
         await updateEventInDb(id, updatedEvent);
         
-        // Revalidate paths BEFORE redirecting
         revalidatePath('/admin/events');
         revalidatePath(`/events/${id}`);
         revalidatePath('/');
@@ -194,18 +208,25 @@ export async function updateEvent(id: string, formData: FormData) {
         return { success: false, message: 'Failed to update event.' };
     }
     
-    // Redirect after all operations are complete
     redirect('/admin/events');
 }
 
-export async function deleteEvent(id: string) {
+export async function deleteEvent(id: string, token: string | null) {
+     const user = decodeToken(token || '');
+    if (!user) {
+        throw new Error('Authentication required.');
+    }
+    const eventToDelete = await getEventById(id);
+    if (eventToDelete?.createdBy !== user.id) {
+         throw new Error('You are not authorized to delete this event.');
+    }
+
     try {
         await deleteEventFromDb(id);
         revalidatePath('/admin/events');
         revalidatePath('/');
         revalidatePath('/discover');
     } catch (e) {
-        // This will be caught by a higher-level error boundary
         throw new Error('Failed to delete event.');
     }
 }
@@ -222,9 +243,42 @@ export async function seedDatabase() {
     }
 }
 
+const profileSchema = z.object({
+    name: z.string().min(2, 'Name must be at least 2 characters.'),
+    role: z.enum(['Admin', 'User']),
+});
+
+
+export async function updateUserProfile(formData: FormData, token: string | null) {
+    const user = decodeToken(token || '');
+    if (!user) {
+        return { success: false, message: 'Authentication required.' };
+    }
+
+    const validated = profileSchema.safeParse(Object.fromEntries(formData.entries()));
+
+    if (!validated.success) {
+        return { success: false, message: 'Invalid data.', errors: validated.error.flatten().fieldErrors };
+    }
+
+    try {
+        const updatedUser = await updateUserInDb(user.id, validated.data);
+        if (updatedUser) {
+            const { password, ...userPayload } = updatedUser;
+            const newToken = createToken(userPayload);
+            return { success: true, message: 'Profile updated successfully!', token: newToken };
+        }
+        return { success: false, message: 'Failed to update profile.' };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        return { success: false, message: errorMessage };
+    }
+}
+
+
 // Server actions to fetch data on the client
-export async function getEventsAction(includePast = false) {
-    return getEvents(includePast);
+export async function getEventsAction(includePast = false, createdBy?: string) {
+    return getEvents(includePast, createdBy);
 }
 
 export async function getEventByIdAction(id: string) {

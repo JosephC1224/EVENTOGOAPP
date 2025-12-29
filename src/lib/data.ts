@@ -4,9 +4,12 @@ import { EventModel, UserModel, TicketModel, OrderModel } from './models';
 import type { Event, User, Ticket, Order } from './types';
 
 // --- Event Functions ---
-export const getEvents = async (includePast = false): Promise<Event[]> => {
+export const getEvents = async (includePast = false, createdBy?: string): Promise<Event[]> => {
   await dbConnect();
-  const query = includePast ? {} : { date: { $gte: new Date() } };
+  const query: any = includePast ? {} : { date: { $gte: new Date() } };
+  if (createdBy) {
+    query.createdBy = createdBy;
+  }
   const events = await EventModel.find(query).sort({ date: 'asc' }).lean();
   return JSON.parse(JSON.stringify(events.map(e => ({ ...e, id: e._id.toString() }))));
 };
@@ -72,6 +75,22 @@ export const createNewUser = async (name: string, email: string, password: strin
     const { _id, ...rest } = newUser.toObject();
     return { id: _id.toString(), ...rest };
 };
+
+export const updateUser = async (userId: string, data: Partial<User>): Promise<User | null> => {
+    await dbConnect();
+    if (!mongoose.Types.ObjectId.isValid(userId)) return null;
+
+    // Don't allow password to be updated through this generic method
+    const { password, ...updateData } = data;
+
+    const updatedUser = await UserModel.findByIdAndUpdate(userId, updateData, { new: true }).lean();
+    if (updatedUser) {
+        const { _id, ...rest } = updatedUser as any;
+        return { id: _id.toString(), ...rest } as User;
+    }
+    return null;
+}
+
 
 // --- Ticket/Order Functions ---
 export const createOrder = async (
@@ -211,63 +230,77 @@ export const seedDatabase = async () => {
     // Seed Users
     const users = await UserModel.create([
         { name: 'Alice', email: 'alice@example.com', password: 'password', role: 'User' },
-        { name: 'Admin', email: 'admin@example.com', password: 'password', role: 'Admin' },
+        { name: 'Admin User', email: 'admin@example.com', password: 'password', role: 'Admin' },
     ]);
+    
+    const adminUser = users.find(u => u.role === 'Admin');
 
     // Seed Events
-    const events = await EventModel.create([
-        {
-            name: "Indie-Rock & Folk Night",
-            description: "Join us for a magical evening with the best of indie-rock and folk music. Featuring local bands and solo artists.",
-            date: new Date(new Date().setDate(new Date().getDate() + 7)),
-            location: { name: "The Cultural House", lat: -0.2201, lng: -78.5123 },
-            capacity: 150,
-            image: "event-concert",
-            ticketTypes: [
-                { id: 'tt-1-1', name: "General Admission", price: 25.00 },
-                { id: 'tt-1-2', name: "VIP", price: 50.00 }
-            ]
-        },
-        {
-            name: "Future of Tech Summit",
-            description: "A two-day summit exploring the latest trends in AI, blockchain, and quantum computing. Network with industry leaders.",
-            date: new Date(new Date().setDate(new Date().getDate() + 14)),
-            location: { name: "Quito Convention Center", lat: -0.1762, lng: -78.4844 },
-            capacity: 500,
-            image: "event-conference",
-            ticketTypes: [
-                { id: 'tt-2-1', name: "Student Pass", price: 50.00 },
-                { id: 'tt-2-2', name: "Standard Pass", price: 150.00 },
-                { id: 'tt-2-3', name: "All-Access Pass", price: 300.00 }
-            ]
-        },
-        {
-            name: "Modern Art Gala",
-            description: "An exclusive evening celebrating modern art. The event includes a silent auction and cocktail reception.",
-            date: new Date(new Date().setDate(new Date().getDate() + 21)),
-            location: { name: "Metropolitan Cultural Center", lat: -0.2202, lng: -78.5125 },
-            capacity: 200,
-            image: "event-exhibition",
-            ticketTypes: [
-                { id: 'tt-3-1', name: "Standard Entry", price: 75.00 }
-            ]
-        },
-        {
-            name: "Quito Street Food Festival",
-            description: "A weekend-long celebration of the best street food Quito has to offer. Live music and family-friendly activities.",
-            date: new Date(new Date().setDate(new Date().getDate() + 30)),
-            location: { name: "Parque La Carolina", lat: -0.1822, lng: -78.4846 },
-            capacity: 1000,
-            image: "event-food-festival",
-            ticketTypes: [
-                { id: 'tt-4-1', name: "Day Pass", price: 10.00 },
-                { id: 'tt-4-2', name: "Weekend Pass", price: 15.00 }
-            ]
+    if (adminUser) {
+        const events = await EventModel.create([
+            {
+                name: "Indie-Rock & Folk Night",
+                description: "Join us for a magical evening with the best of indie-rock and folk music. Featuring local bands and solo artists.",
+                date: new Date(new Date().setDate(new Date().getDate() + 7)),
+                location: { name: "The Cultural House", lat: -0.2201, lng: -78.5123 },
+                capacity: 150,
+                image: "event-concert",
+                ticketTypes: [
+                    { id: 'tt-1-1', name: "General Admission", price: 25.00 },
+                    { id: 'tt-1-2', name: "VIP", price: 50.00 }
+                ],
+                createdBy: adminUser.id,
+            },
+            {
+                name: "Future of Tech Summit",
+                description: "A two-day summit exploring the latest trends in AI, blockchain, and quantum computing. Network with industry leaders.",
+                date: new Date(new Date().setDate(new Date().getDate() + 14)),
+                location: { name: "Quito Convention Center", lat: -0.1762, lng: -78.4844 },
+                capacity: 500,
+                image: "event-conference",
+                ticketTypes: [
+                    { id: 'tt-2-1', name: "Student Pass", price: 50.00 },
+                    { id: 'tt-2-2', name: "Standard Pass", price: 150.00 },
+                    { id: 'tt-2-3', name: "All-Access Pass", price: 300.00 }
+                ],
+                createdBy: adminUser.id,
+            },
+            {
+                name: "Modern Art Gala",
+                description: "An exclusive evening celebrating modern art. The event includes a silent auction and cocktail reception.",
+                date: new Date(new Date().setDate(new Date().getDate() + 21)),
+                location: { name: "Metropolitan Cultural Center", lat: -0.2202, lng: -78.5125 },
+                capacity: 200,
+                image: "event-exhibition",
+                ticketTypes: [
+                    { id: 'tt-3-1', name: "Standard Entry", price: 75.00 }
+                ],
+                createdBy: adminUser.id,
+            },
+            {
+                name: "Quito Street Food Festival",
+                description: "A weekend-long celebration of the best street food Quito has to offer. Live music and family-friendly activities.",
+                date: new Date(new Date().setDate(new Date().getDate() + 30)),
+                location: { name: "Parque La Carolina", lat: -0.1822, lng: -78.4846 },
+                capacity: 1000,
+                image: "event-food-festival",
+                ticketTypes: [
+                    { id: 'tt-4-1', name: "Day Pass", price: 10.00 },
+                    { id: 'tt-4-2', name: "Weekend Pass", price: 15.00 }
+                ],
+                createdBy: adminUser.id,
+            }
+        ]);
+
+         return {
+            users: users.length,
+            events: events.length,
         }
-    ]);
+    }
+
 
     return {
         users: users.length,
-        events: events.length,
+        events: 0,
     }
 };

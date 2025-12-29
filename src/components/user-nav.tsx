@@ -18,7 +18,7 @@ import {
 import { User } from '@/lib/types';
 import Link from 'next/link';
 import { useSession } from '@/hooks/use-session';
-import { Ticket, LogOut } from 'lucide-react';
+import { Ticket, LogOut, User as UserIcon } from 'lucide-react';
 
 export function UserNav({ user }: { user: User }) {
   const { setToken } = useSession();
@@ -53,6 +53,12 @@ export function UserNav({ user }: { user: User }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+           <DropdownMenuItem asChild>
+            <Link href="/profile">
+              <UserIcon className="mr-2 h-4 w-4" />
+              <span>My Profile</span>
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/tickets">
               <Ticket className="mr-2 h-4 w-4" />

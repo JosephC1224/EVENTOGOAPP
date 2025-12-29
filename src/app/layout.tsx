@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import AppHeader from '@/components/app-header';
+import { SessionProvider } from '@/hooks/use-session';
+
 
 export const metadata: Metadata = {
   title: 'Event Go',
@@ -27,9 +29,11 @@ export default function RootLayout({
           crossOrigin=""/>
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col">
-        <AppHeader />
-        <main className="flex-1">{children}</main>
-        <Toaster />
+        <SessionProvider>
+            <AppHeader />
+            <main className="flex-1">{children}</main>
+            <Toaster />
+        </SessionProvider>
       </body>
     </html>
   );

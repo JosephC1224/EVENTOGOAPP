@@ -1,34 +1,71 @@
-import { getSessionUser } from '@/lib/auth';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSession } from '@/hooks/use-session';
 import { getTicketsByUserId, getEventById } from '@/lib/data';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import TicketCard from '@/components/ticket-card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Event, Ticket } from '@/lib/types';
 
-export default async function MyTicketsPage() {
-  const user = await getSessionUser();
-  if (!user) {
-    redirect('/login');
+
+type EnrichedTicket = Ticket & { event?: Event };
+
+export default function MyTicketsPage() {
+  const { user, loading: sessionLoading } = useSession();
+  const router = useRouter();
+  const [tickets, setTickets] = useState<EnrichedTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    async function fetchTickets() {
+      setLoading(true);
+      const userTickets = await getTicketsByUserId(user!.id);
+      
+      const enrichedTickets = await Promise.all(
+        userTickets.map(async (ticket) => {
+          const event = await getEventById(ticket.eventId);
+          return { ...ticket, event };
+        })
+      );
+
+      setTickets(enrichedTickets);
+      setLoading(false);
+    }
+
+    fetchTickets();
+  }, [user, router, sessionLoading]);
+
+
+  if (loading || sessionLoading) {
+    return (
+        <div className="container mx-auto px-4 py-8">
+            <Skeleton className="h-10 w-1/4 mb-8" />
+            <div className="space-y-6">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-48 w-full" />
+            </div>
+        </div>
+    )
   }
-
-  const userTickets = await getTicketsByUserId(user.id);
-
-  // Enrich tickets with event data
-  const enrichedTickets = await Promise.all(
-    userTickets.map(async (ticket) => {
-      const event = await getEventById(ticket.eventId);
-      return { ...ticket, event };
-    })
-  );
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold tracking-tight mb-8 font-headline">
         My Tickets
       </h1>
-      {enrichedTickets.length > 0 ? (
+      {tickets.length > 0 ? (
         <div className="space-y-6">
-          {enrichedTickets.map((ticket) =>
+          {tickets.map((ticket) =>
             ticket.event ? <TicketCard key={ticket.id} ticket={ticket} event={ticket.event} /> : null
           )}
         </div>

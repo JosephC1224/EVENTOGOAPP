@@ -1,6 +1,7 @@
+'use client';
 import Link from 'next/link';
 import { getEvents } from '@/lib/data';
-import { getSessionUser } from '@/lib/auth';
+import { useSession } from '@/hooks/use-session';
 import { redirect } from 'next/navigation';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { deleteEvent, seedDatabase } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from 'react';
+import { Event } from '@/lib/types';
 
 
 function DeleteEventButton({ eventId }: { eventId: string }) {
@@ -54,18 +57,32 @@ function SeedDatabaseButton() {
 }
 
 
-export default async function AdminEventsPage() {
-  const user = await getSessionUser();
-  if (user?.role !== 'Admin') {
-    redirect('/');
+export default function AdminEventsPage() {
+  const { user, loading } = useSession();
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    if (!loading && user?.role !== 'Admin') {
+      redirect('/');
+    }
+  }, [user, loading]);
+  
+  useEffect(() => {
+    async function loadEvents() {
+        try {
+            const fetchedEvents = await getEvents(true); // include past events
+            setEvents(fetchedEvents);
+        } catch(e) {
+            // If db is not connected, it will throw. We can show an empty state.
+        }
+    }
+    loadEvents();
+  }, [])
+
+  if (loading || !user) {
+    return <div>Loading...</div>
   }
 
-  let events = [];
-  try {
-    events = await getEvents(true); // include past events
-  } catch(e) {
-      // If db is not connected, it will throw. We can show an empty state.
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">

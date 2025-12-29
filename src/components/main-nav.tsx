@@ -3,14 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { User } from '@/lib/types';
+import { useSession } from '@/hooks/use-session';
 
-interface MainNavProps extends React.HTMLAttributes<HTMLElement> {
-  user: User | null;
-}
+interface MainNavProps extends React.HTMLAttributes<HTMLElement> {}
 
-export function MainNav({ className, user, ...props }: MainNavProps) {
+export function MainNav({ className, ...props }: MainNavProps) {
   const pathname = usePathname();
+  const { user } = useSession();
 
   const baseRoutes = [
     { href: '/', label: 'Events', active: pathname === '/' },
@@ -26,7 +25,7 @@ export function MainNav({ className, user, ...props }: MainNavProps) {
 
   return (
     <nav
-      className={cn('hidden md:flex items-center space-x-4 lg:space-x-6', className)}
+      className={cn('hidden md:flex items-center space-x-4 lg:space-x-6 mx-6', className)}
       {...props}
     >
       {routes.map((route) => (

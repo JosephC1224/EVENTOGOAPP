@@ -1,22 +1,23 @@
 'use server';
 
 import { z } from 'zod';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { findUserByEmail, createNewUser, createOrder as createNewOrder, validateAndUseTicket as validateTicketInDb, createEvent as createEventInDb, updateEvent as updateEventInDb, deleteEvent as deleteEventFromDb, seedDatabase as seedDatabaseInDb } from './data';
 import { revalidatePath } from 'next/cache';
-import type { Event } from './types';
+import type { Event, User } from './types';
+import { createToken, decodeToken } from './jwt';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
 });
 
-export async function login(prevState: any, formData: FormData) {
+export async function login(formData: FormData) {
   const validatedFields = loginSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
     return {
+      success: false,
       errors: validatedFields.error.flatten().fieldErrors,
     };
   }
@@ -26,20 +27,15 @@ export async function login(prevState: any, formData: FormData) {
 
   if (!user || user.password !== password) {
     return {
-      errors: {
-        email: ['Invalid email or password.'],
-      },
+      success: false,
+      message: 'Invalid email or password.',
     };
   }
-
-  cookies().set('session-user-id', user.id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7, // One week
-    path: '/',
-  });
   
-  redirect('/');
+  const { password: _, ...userPayload } = user;
+  const token = createToken(userPayload);
+  
+  return { success: true, token };
 }
 
 const registerSchema = z.object({
@@ -48,11 +44,12 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters.'),
 });
 
-export async function register(prevState: any, formData: FormData) {
+export async function register(formData: FormData) {
   const validatedFields = registerSchema.safeParse(Object.fromEntries(formData.entries()));
   
   if (!validatedFields.success) {
     return {
+      success: false,
       errors: validatedFields.error.flatten().fieldErrors,
     };
   }
@@ -62,37 +59,31 @@ export async function register(prevState: any, formData: FormData) {
 
   if (existingUser) {
     return {
-      errors: {
-        email: ['A user with this email already exists.'],
-      },
+        success: false,
+        message: 'A user with this email already exists.',
     };
   }
   
   const user = await createNewUser(name, email, password);
-
-  cookies().set('session-user-id', user.id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  });
-
-  redirect('/');
+  
+  const { password: _, ...userPayload } = user;
+  const token = createToken(userPayload);
+  
+  return { success: true, token };
 }
 
-export async function logout() {
-  cookies().delete('session-user-id');
-  redirect('/login');
-}
-
-export async function purchaseTickets(eventId: string, ticketSelections: {ticketTypeId: string, quantity: number}[]) {
-  const userId = cookies().get('session-user-id')?.value;
-  if (!userId) {
+export async function purchaseTickets(eventId: string, ticketSelections: {ticketTypeId: string, quantity: number}[], token: string | null) {
+  if (!token) {
     return { success: false, message: 'You must be logged in to purchase tickets.' };
   }
   
+  const userPayload = decodeToken(token);
+  if (!userPayload) {
+    return { success: false, message: 'Invalid session. Please log in again.' };
+  }
+
   try {
-    await createNewOrder(userId, eventId, ticketSelections);
+    await createNewOrder(userPayload.id, eventId, ticketSelections);
     revalidatePath('/tickets');
     return { success: true, message: 'Tickets purchased successfully!' };
   } catch(error) {

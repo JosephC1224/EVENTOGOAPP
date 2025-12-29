@@ -1,13 +1,23 @@
-import { getSessionUser } from '@/lib/auth';
+'use client';
+
+import { useEffect } from 'react';
+import { useSession } from '@/hooks/use-session';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import TicketValidationForm from '@/components/ticket-validation-form';
 import { ScanLine } from 'lucide-react';
 
-export default async function ScanPage() {
-  const user = await getSessionUser();
-  if (!user || user.role !== 'Admin') {
-    redirect('/');
+export default function ScanPage() {
+  const { user, loading } = useSession();
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== 'Admin')) {
+      redirect('/');
+    }
+  }, [user, loading]);
+
+  if (loading || !user) {
+    return <div>Loading...</div>;
   }
 
   return (

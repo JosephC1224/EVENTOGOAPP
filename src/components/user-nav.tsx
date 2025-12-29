@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Avatar,
   AvatarFallback,
@@ -15,12 +17,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User } from '@/lib/types';
 import Link from 'next/link';
-import { logout } from '@/lib/actions';
-import { Ticket, User as UserIcon, LogOut } from 'lucide-react';
+import { useSession } from '@/hooks/use-session';
+import { Ticket, LogOut } from 'lucide-react';
 
 export function UserNav({ user }: { user: User }) {
+  const { setToken } = useSession();
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  }
+  
+  const handleLogout = () => {
+    setToken(null);
+    // Optionally redirect or refresh
+    window.location.href = '/login';
   }
 
   return (
@@ -52,14 +61,10 @@ export function UserNav({ user }: { user: User }) {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <form action={logout}>
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log out</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

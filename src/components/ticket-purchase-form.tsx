@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { purchaseTickets } from '@/lib/actions';
 import { Plus, Minus } from 'lucide-react';
+import { useSession } from '@/hooks/use-session';
 
 export default function TicketPurchaseForm({ event }: { event: Event }) {
   const [selections, setSelections] = useState<Record<string, number>>(
@@ -15,6 +16,8 @@ export default function TicketPurchaseForm({ event }: { event: Event }) {
   const [isPending, setIsPending] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { token, user } = useSession();
+
 
   const handleQuantityChange = (ticketTypeId: string, delta: number) => {
     setSelections(prev => ({
@@ -31,6 +34,17 @@ export default function TicketPurchaseForm({ event }: { event: Event }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+        toast({
+            title: 'Please log in',
+            description: 'You need to be logged in to purchase tickets.',
+            variant: 'destructive',
+        });
+        router.push('/login');
+        return;
+    }
+
     setIsPending(true);
 
     const ticketSelections = Object.entries(selections)
@@ -47,7 +61,7 @@ export default function TicketPurchaseForm({ event }: { event: Event }) {
         return;
     }
 
-    const result = await purchaseTickets(event.id, ticketSelections);
+    const result = await purchaseTickets(event.id, ticketSelections, token);
 
     if (result.success) {
       toast({

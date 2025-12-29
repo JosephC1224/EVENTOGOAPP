@@ -2,26 +2,40 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { register } from '@/lib/actions';
+import { useSession } from '@/hooks/use-session';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
-    const [errors, setErrors] = useState<Record<string, string[] | undefined> | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const [isPending, setIsPending] = useState(false);
+    const { setToken } = useSession();
+    const router = useRouter();
+    const { toast } = useToast();
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setIsPending(true);
-        setErrors(null);
+        setError(null);
 
         const formData = new FormData(event.currentTarget);
-        const result = await register(null, formData);
+        const result = await register(formData);
 
-        if (result?.errors) {
-            setErrors(result.errors);
+        if (result?.success && result.token) {
+            setToken(result.token);
+            toast({
+                title: 'Account created!',
+                description: 'Welcome to Event Go!',
+            });
+            router.push('/');
+            router.refresh();
+        } else {
+             setError(result?.message || 'An unknown error occurred.');
         }
 
         setIsPending(false);
@@ -39,18 +53,16 @@ export default function RegisterPage() {
                 <div className="grid gap-2">
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" name="name" placeholder="Max Robinson" required />
-                {errors?.name && <p className="text-sm text-destructive">{errors.name[0]}</p>}
                 </div>
                 <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" name="email" type="email" placeholder="m@example.com" required />
-                {errors?.email && <p className="text-sm text-destructive">{errors.email[0]}</p>}
                 </div>
                 <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" name="password" type="password" required />
-                {errors?.password && <p className="text-sm text-destructive">{errors.password[0]}</p>}
                 </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button className="w-full" type="submit" disabled={isPending}>
                     {isPending ? 'Creating Account...' : 'Create an account'}
                 </Button>

@@ -153,7 +153,7 @@ export async function createEvent(formData: FormData, token: string | null) {
                 lng: validated.data.locationLng,
             },
             ticketTypes: JSON.parse(ticketTypes),
-            createdBy: user.id, // This line was missing
+            createdBy: user.id,
         };
         await createEventInDb(newEvent);
         

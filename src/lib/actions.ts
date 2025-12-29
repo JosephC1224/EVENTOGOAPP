@@ -153,7 +153,7 @@ export async function createEvent(formData: FormData, token: string | null) {
                 lng: validated.data.locationLng,
             },
             ticketTypes: JSON.parse(ticketTypes),
-            createdBy: user.id,
+            createdBy: user.id, // THIS IS THE FIX
         };
         await createEventInDb(newEvent);
         
@@ -286,3 +286,5 @@ export async function getEventByIdAction(id: string) {
 export async function getTicketsByUserIdAction(userId: string) {
     return getTicketsByUserId(userId);
 }
+
+    

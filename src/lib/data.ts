@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 import dbConnect from './db';
 import { EventModel, UserModel, TicketModel, OrderModel } from './models';
@@ -249,7 +250,7 @@ export const seedDatabase = async () => {
                     { id: 'tt-1-1', name: "General Admission", price: 25.00 },
                     { id: 'tt-1-2', name: "VIP", price: 50.00 }
                 ],
-                createdBy: adminUser.id,
+                createdBy: adminUser._id.toString(),
             },
             {
                 name: "Future of Tech Summit",
@@ -263,7 +264,7 @@ export const seedDatabase = async () => {
                     { id: 'tt-2-2', name: "Standard Pass", price: 150.00 },
                     { id: 'tt-2-3', name: "All-Access Pass", price: 300.00 }
                 ],
-                createdBy: adminUser.id,
+                createdBy: adminUser._id.toString(),
             },
             {
                 name: "Modern Art Gala",
@@ -275,7 +276,7 @@ export const seedDatabase = async () => {
                 ticketTypes: [
                     { id: 'tt-3-1', name: "Standard Entry", price: 75.00 }
                 ],
-                createdBy: adminUser.id,
+                createdBy: adminUser._id.toString(),
             },
             {
                 name: "Quito Street Food Festival",
@@ -288,7 +289,7 @@ export const seedDatabase = async () => {
                     { id: 'tt-4-1', name: "Day Pass", price: 10.00 },
                     { id: 'tt-4-2', name: "Weekend Pass", price: 15.00 }
                 ],
-                createdBy: adminUser.id,
+                createdBy: adminUser._id.toString(),
             }
         ]);
 
@@ -304,3 +305,6 @@ export const seedDatabase = async () => {
         events: 0,
     }
 };
+
+
+    

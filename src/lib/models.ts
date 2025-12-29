@@ -30,7 +30,7 @@ const EventSchema = new Schema<Event>({
 });
 
 const TicketSchema = new Schema<Ticket>({
-    orderId: { type: String, required: true },
+    orderId: { type: String },
     eventId: { type: String, required: true },
     userId: { type: String, required: true },
     ticketTypeId: { type: String, required: true },

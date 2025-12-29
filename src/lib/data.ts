@@ -83,6 +83,14 @@ export const createOrder = async (
     const event = await getEventById(eventId);
     if (!event) throw new Error('Event not found');
     
+    const totalTicketsToPurchase = ticketSelections.reduce((sum, sel) => sum + sel.quantity, 0);
+
+    const existingTickets = await TicketModel.countDocuments({ eventId });
+
+    if(existingTickets + totalTicketsToPurchase > event.capacity) {
+        throw new Error(`Cannot purchase tickets. Only ${event.capacity - existingTickets} tickets left.`);
+    }
+
     const newTickets: any[] = [];
     let totalAmount = 0;
     
@@ -93,20 +101,23 @@ export const createOrder = async (
         totalAmount += ticketType.price * selection.quantity;
 
         for (let i = 0; i < selection.quantity; i++) {
+            // We create a temporary ticket structure, the final one will be created by mongoose
             const newTicketData = {
                 eventId,
                 userId,
                 ticketTypeId: selection.ticketTypeId,
                 status: 'valid',
-                qrData: 'placeholder' // temp qrData
+                qrData: 'placeholder'
             };
             newTickets.push(newTicketData);
         }
     }
 
+    // Insert tickets and get their generated IDs
     const createdTicketDocs = await TicketModel.insertMany(newTickets);
     const ticketIds = createdTicketDocs.map(t => t._id);
 
+    // Create the order with the ticket IDs
     const newOrder = await OrderModel.create({
         userId,
         eventId,
@@ -114,14 +125,16 @@ export const createOrder = async (
         totalAmount,
         createdAt: new Date(),
     });
-    
-    // Update QR data and orderId after tickets and order are created
+
+    // Now, update each ticket with its final qrData and the orderId
     for (const ticket of createdTicketDocs) {
         const qrData = JSON.stringify({ ticketId: ticket._id.toString(), eventId, userId });
         await TicketModel.findByIdAndUpdate(ticket._id, { qrData, orderId: newOrder._id.toString() });
     }
 
+    // Fetch the final order with populated ticket data to return
     const finalOrder = await OrderModel.findById(newOrder._id).populate('tickets').lean();
+    
     const result = {
         ...finalOrder,
         id: finalOrder!._id.toString(),

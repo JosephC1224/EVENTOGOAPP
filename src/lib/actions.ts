@@ -151,6 +151,8 @@ export async function createEvent(formData: FormData) {
         };
         await createEventInDb(newEvent);
         revalidatePath('/admin/events');
+        revalidatePath('/');
+        revalidatePath('/discover');
     } catch (e) {
         return { success: false, message: 'Failed to create event.' };
     }

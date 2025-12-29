@@ -180,6 +180,8 @@ export async function updateEvent(id: string, formData: FormData) {
         await updateEventInDb(id, updatedEvent);
         revalidatePath('/admin/events');
         revalidatePath(`/events/${id}`);
+        revalidatePath('/');
+        revalidatePath('/discover');
     } catch (e) {
         return { success: false, message: 'Failed to update event.' };
     }
@@ -190,6 +192,8 @@ export async function deleteEvent(id: string) {
     try {
         await deleteEventFromDb(id);
         revalidatePath('/admin/events');
+        revalidatePath('/');
+        revalidatePath('/discover');
     } catch (e) {
         // This will be caught by a higher-level error boundary
         throw new Error('Failed to delete event.');
@@ -201,6 +205,7 @@ export async function seedDatabase() {
         await seedDatabaseInDb();
         revalidatePath('/admin/events');
         revalidatePath('/');
+        revalidatePath('/discover');
         return { success: true, message: "Database seeded successfully!" };
     } catch (e) {
         return { success: false, message: "Failed to seed database." };

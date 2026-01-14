@@ -34,14 +34,19 @@ export function ProfileImageUpload({ currentImage, onImageSelected }: ProfileIma
         <AvatarImage src={preview} alt="Profile" />
         <AvatarFallback className="text-2xl">YO</AvatarFallback>
       </Avatar>
-      <div className="grid w-full max-w-sm items-center gap-1.5">
-        <Label htmlFor="picture" className="text-gray-300 font-bold">Cambiar foto</Label>
+      <div className="flex flex-col items-center gap-2">
+        <Label 
+          htmlFor="picture" 
+          className="inline-block cursor-pointer py-2 px-5 text-sm rounded-full bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition-colors"
+        >
+          Cambiar foto
+        </Label>
         <Input 
           id="picture" 
           type="file" 
           accept="image/*" 
           onChange={handleFileChange} 
-          className="text-white file:text-black file:bg-yellow-500 file:hover:bg-yellow-400 file:border-none file:rounded-full file:px-4 file:py-2 file:mr-4 hover:cursor-pointer bg-[#1a1a1a] border border-gray-700 rounded-md"
+          className="hidden"
         />
       </div>
     </div>
